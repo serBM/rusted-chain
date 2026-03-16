@@ -40,7 +40,10 @@ fn main() {
     let distortion_enabled_for_closure = Arc::clone(&distortion_enabled);
 
     // Drive setting for distortion effect (we multiply the signal by this value
-    let drive: f32 = 5.0;
+    let drive: f32 = 7.0;
+    // Bit depth setting for the bit crusher
+    let bit_depth: u32 = 6;
+
 
     // Input stream: runs whenever new audio samples arrive from the microphone
     // `move` transfers ownership of `producer` into this closure
@@ -53,7 +56,8 @@ fn main() {
                     let mut signal = mono;
                     let distortion_enabled = distortion_enabled_for_closure.lock().unwrap();
                     if *distortion_enabled {
-                        signal = distortion_soft(mono, drive); // apply distortion effect
+                        signal = bitc_crush(signal, bit_depth);
+                        signal = distortion_soft(signal, drive); // apply distortion effect
                     }
                     producer.try_push(signal).ok(); // left output
                     producer.try_push(signal).ok(); // right output
@@ -108,4 +112,9 @@ fn distortion_hard(signal: f32, drive: f32) -> f32 {
 
 fn distortion_soft(signal: f32, drive: f32) -> f32 {
     (signal * drive).tanh()
+}
+
+fn bitc_crush(signal: f32, bit_depth: u32) -> f32 {
+    let steps = 2_f32.powi(bit_depth as i32);
+    (signal * steps as f32).round() / steps as f32
 }
