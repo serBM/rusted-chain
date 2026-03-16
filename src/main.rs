@@ -4,7 +4,7 @@ use ringbuf::traits::{Consumer, Producer, Split};
 use std::sync::{Mutex, Arc};
 
 trait Effect {
-    fn process(&mut self, signal: f32) -> f32;
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32);
     fn name(&self) -> &str;
 }
 
@@ -14,11 +14,17 @@ struct Distortion {
 }
 
 impl Effect for Distortion {
-    fn process(&mut self, signal: f32) -> f32 {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32) {
         if self.hard {
-            (signal * self.drive).clamp(-1.0, 1.0)
+            (
+                (left_signal * self.drive).clamp(-1.0, 1.0),
+                (right_signal * self.drive).clamp(-1.0, 1.0),
+            )
         } else {
-            (signal * self.drive).tanh()
+            (
+                (left_signal * self.drive).tanh(),
+                (right_signal * self.drive).tanh(),
+            )
         }
     }
     fn name(&self) -> &str {
@@ -31,9 +37,12 @@ struct Bitcrusher {
 }
 
 impl Effect for Bitcrusher {
-    fn process(&mut self, signal: f32) -> f32 {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
         let steps = 2_f32.powi(self.bit_depth as i32);
-        (signal * steps as f32).round() / steps as f32
+        (
+            (left_signal * steps as f32).round() / steps as f32,
+            (right_signal * steps as f32).round() / steps as f32,
+        )
     }
     fn name(&self) -> &str {
         "bitcrusher"
@@ -41,24 +50,34 @@ impl Effect for Bitcrusher {
 }
 
 struct Delay {
-    past_signal: Vec<f32>,
+    past_left_signal: Vec<f32>,
+    past_right_signal: Vec<f32>,
     length: usize,
     decay: f32,
 }
 
 impl Effect for Delay {
-    fn process(&mut self, signal: f32) -> f32 {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
         // get delayed signal or 0.0 if past_signal is still empty
-        let delayed = self.past_signal.get(0).copied().unwrap_or(0.0);
+        let delayed_left = self.past_left_signal.get(0).copied().unwrap_or(0.0);
+        let delayed_right = self.past_right_signal.get(0).copied().unwrap_or(0.0);
         // mix signal + delay
-        let output: f32 = signal + (delayed * self.decay);
+        let left_output: f32 = left_signal + (delayed_left * self.decay);
+        let right_output: f32 = right_signal + (delayed_right * self.decay);
         // push current signal to the buffer
-        self.past_signal.push(output);
+        self.past_left_signal.push(left_output);
+        self.past_right_signal.push(right_output);
         // clean past_signal buffer
-        if self.past_signal.len() > self.length {
-            self.past_signal.remove(0);
+        if self.past_left_signal.len() > self.length {
+            self.past_left_signal.remove(0);
         }
-        output
+        if self.past_right_signal.len() > self.length {
+            self.past_right_signal.remove(0);
+        }
+        (
+            left_output,
+            right_output,
+        )
     }
     fn name(&self) -> &str {
         "delay"
@@ -106,7 +125,7 @@ fn main() {
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
         EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
-        EffectSlot { effect: Box::new(Delay { past_signal: Vec::new(), length: 22050, decay: 0.3}), enabled: true },
+        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), length: 22050, decay: 0.3}), enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
@@ -117,15 +136,15 @@ fn main() {
             &config,
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
                 for chunk in data.chunks(2) { // chunk = [left, right]
-                    let mono = (chunk[0] + chunk[1]) / 2.0;
-                    let mut signal = mono;
+                    let mut left_signal = chunk[0];
+                    let mut right_signal = chunk[0];
                     for effect in effects_for_closure.lock().unwrap().iter_mut() {
                         if effect.enabled {
-                            signal = effect.effect.process(signal);
+                            (left_signal, right_signal) = effect.effect.process(left_signal, right_signal);
                         }
                     }
-                    producer.try_push(signal).ok(); // left output
-                    producer.try_push(signal).ok(); // right output
+                    producer.try_push(left_signal).ok(); // left output
+                    producer.try_push(right_signal).ok(); // right output
                 }
             },
             |err| eprintln!("Input error: {}", err),
