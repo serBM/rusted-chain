@@ -54,6 +54,7 @@ struct Delay {
     past_right_signal: Vec<f32>,
     length: usize,
     decay: f32,
+    ping_pong: bool,
 }
 
 impl Effect for Delay {
@@ -65,8 +66,13 @@ impl Effect for Delay {
         let left_output: f32 = left_signal + (delayed_left * self.decay);
         let right_output: f32 = right_signal + (delayed_right * self.decay);
         // push current signal to the buffer
-        self.past_left_signal.push(left_output);
-        self.past_right_signal.push(right_output);
+        if self.ping_pong{
+            self.past_left_signal.push(right_output);
+            self.past_right_signal.push(left_output);
+        } else {
+            self.past_left_signal.push(left_output);
+            self.past_right_signal.push(right_output);
+        }
         // clean past_signal buffer
         if self.past_left_signal.len() > self.length {
             self.past_left_signal.remove(0);
@@ -125,7 +131,7 @@ fn main() {
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
         EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
-        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), length: 22050, decay: 0.3}), enabled: true },
+        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), length: 22050, decay: 0.3, ping_pong: true}), enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
