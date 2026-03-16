@@ -3,6 +3,73 @@ use ringbuf::HeapRb;
 use ringbuf::traits::{Consumer, Producer, Split};
 use std::sync::{Mutex, Arc};
 
+trait Effect {
+    fn process(&mut self, signal: f32) -> f32;
+    fn name(&self) -> &str;
+}
+
+struct Distortion {
+    drive: f32,
+    hard: bool,
+}
+
+impl Effect for Distortion {
+    fn process(&mut self, signal: f32) -> f32 {
+        if self.hard {
+            (signal * self.drive).clamp(-1.0, 1.0)
+        } else {
+            (signal * self.drive).tanh()
+        }
+    }
+    fn name(&self) -> &str {
+        "distortion"
+    }
+}
+
+struct Bitcrusher {
+   bit_depth: u32,
+}
+
+impl Effect for Bitcrusher {
+    fn process(&mut self, signal: f32) -> f32 {
+        let steps = 2_f32.powi(self.bit_depth as i32);
+        (signal * steps as f32).round() / steps as f32
+    }
+    fn name(&self) -> &str {
+        "bitcrusher"
+    }
+}
+
+struct Delay {
+    past_signal: Vec<f32>,
+    length: usize,
+    decay: f32,
+}
+
+impl Effect for Delay {
+    fn process(&mut self, signal: f32) -> f32 {
+        // get delayed signal or 0.0 if past_signal is still empty
+        let delayed = self.past_signal.get(0).copied().unwrap_or(0.0);
+        // mix signal + delay
+        let output: f32 = signal + (delayed * self.decay);
+        // push current signal to the buffer
+        self.past_signal.push(output);
+        // clean past_signal buffer
+        if self.past_signal.len() > self.length {
+            self.past_signal.remove(0);
+        }
+        output
+    }
+    fn name(&self) -> &str {
+        "delay"
+    }
+}
+
+struct EffectSlot {
+    effect: Box<dyn Effect + Send>,
+    enabled: bool,
+}
+
 fn main() {
     let host = cpal::default_host();
 
@@ -35,15 +102,13 @@ fn main() {
         producer.try_push(0.0).ok();
     }
 
-    // Value to enable or disable distortion effect
-    let distortion_enabled: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
-    let distortion_enabled_for_closure = Arc::clone(&distortion_enabled);
-
-    // Drive setting for distortion effect (we multiply the signal by this value
-    let drive: f32 = 7.0;
-    // Bit depth setting for the bit crusher
-    let bit_depth: u32 = 6;
-
+    // Effects definition with their settings
+    let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
+        EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
+        EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
+        EffectSlot { effect: Box::new(Delay { past_signal: Vec::new(), length: 22050, decay: 0.3}), enabled: true },
+    ]));
+    let effects_for_closure = Arc::clone(&effects);
 
     // Input stream: runs whenever new audio samples arrive from the microphone
     // `move` transfers ownership of `producer` into this closure
@@ -54,10 +119,10 @@ fn main() {
                 for chunk in data.chunks(2) { // chunk = [left, right]
                     let mono = (chunk[0] + chunk[1]) / 2.0;
                     let mut signal = mono;
-                    let distortion_enabled = distortion_enabled_for_closure.lock().unwrap();
-                    if *distortion_enabled {
-                        signal = bitc_crush(signal, bit_depth);
-                        signal = distortion_soft(signal, drive); // apply distortion effect
+                    for effect in effects_for_closure.lock().unwrap().iter_mut() {
+                        if effect.enabled {
+                            signal = effect.effect.process(signal);
+                        }
                     }
                     producer.try_push(signal).ok(); // left output
                     producer.try_push(signal).ok(); // right output
@@ -97,24 +162,11 @@ fn main() {
 
         if input == "quit" {
             break; // exit the loop
-        } else if input == "d" {
-            let mut distortion_value = distortion_enabled.lock().unwrap();
-            *distortion_value = !*distortion_value;
-            println!("Distortion active : {distortion_value}")
+        } else if input == "e" {
+            for effect in effects.lock().unwrap().iter_mut() {
+                effect.enabled = !effect.enabled ;
+                println!("{}: {}", effect.effect.name(), effect.enabled);
+            }
         }
     }
-}
-
-#[allow(dead_code)]
-fn distortion_hard(signal: f32, drive: f32) -> f32 {
-    (signal * drive).clamp(-1.0, 1.0)
-}
-
-fn distortion_soft(signal: f32, drive: f32) -> f32 {
-    (signal * drive).tanh()
-}
-
-fn bitc_crush(signal: f32, bit_depth: u32) -> f32 {
-    let steps = 2_f32.powi(bit_depth as i32);
-    (signal * steps as f32).round() / steps as f32
 }
