@@ -52,13 +52,19 @@ impl Effect for Bitcrusher {
 struct Delay {
     past_left_signal: Vec<f32>,
     past_right_signal: Vec<f32>,
-    length: usize,
+    delay_ms: f32,
     decay: f32,
     ping_pong: bool,
 }
 
 impl Effect for Delay {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
+        // if delay_ms is 0.0 we clear the buffers and send dry signal directly
+        if self.delay_ms==0.0 {
+            self.past_left_signal.clear();
+            self.past_right_signal.clear();
+            return (left_signal,right_signal)
+        }
         // get delayed signal or 0.0 if past_signal is still empty
         let delayed_left = self.past_left_signal.get(0).copied().unwrap_or(0.0);
         let delayed_right = self.past_right_signal.get(0).copied().unwrap_or(0.0);
@@ -74,10 +80,11 @@ impl Effect for Delay {
             self.past_right_signal.push(right_output);
         }
         // clean past_signal buffer
-        if self.past_left_signal.len() > self.length {
+        let length = (SAMPLE_RATE as f32 / 1000.0 * self.delay_ms) as usize;
+        if self.past_left_signal.len() > length {
             self.past_left_signal.remove(0);
         }
-        if self.past_right_signal.len() > self.length {
+        if self.past_right_signal.len() > length {
             self.past_right_signal.remove(0);
         }
         (
@@ -94,6 +101,8 @@ struct EffectSlot {
     effect: Box<dyn Effect + Send>,
     enabled: bool,
 }
+
+const SAMPLE_RATE: u32 = 44100;
 
 fn main() {
     let host = cpal::default_host();
@@ -113,7 +122,7 @@ fn main() {
 
     let config = cpal::StreamConfig {
         channels: 2,
-        sample_rate: cpal::SampleRate(44100),
+        sample_rate: cpal::SampleRate(SAMPLE_RATE),
         buffer_size: cpal::BufferSize::Fixed(buffer_size),
     };
 
@@ -131,7 +140,7 @@ fn main() {
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
         EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
-        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), length: 22050, decay: 0.3, ping_pong: true}), enabled: true },
+        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
