@@ -103,6 +103,7 @@ struct EffectSlot {
 }
 
 const SAMPLE_RATE: u32 = 44100;
+const BUFFER_SIZE: u32 = 512;
 
 fn main() {
     let host = cpal::default_host();
@@ -118,21 +119,19 @@ fn main() {
     println!("Input:  {}", input_device.name().unwrap());
     println!("Output: {}", output_device.name().unwrap());
 
-    let buffer_size = 256; // frames per callback (~5.8ms at 44100 Hz)
-
     let config = cpal::StreamConfig {
         channels: 2,
         sample_rate: cpal::SampleRate(SAMPLE_RATE),
-        buffer_size: cpal::BufferSize::Fixed(buffer_size),
+        buffer_size: cpal::BufferSize::Fixed(BUFFER_SIZE),
     };
 
     // Ring buffer: holds 4x the buffer size to absorb timing differences between streams
-    let latency_samples = buffer_size as usize * config.channels as usize * 4;
+    let latency_samples = BUFFER_SIZE as usize * config.channels as usize * 4;
     let rb = HeapRb::<f32>::new(latency_samples);
     let (mut producer, mut consumer) = rb.split();
 
     // Pre-fill with one buffer worth of silence
-    for _ in 0..buffer_size as usize * config.channels as usize {
+    for _ in 0..BUFFER_SIZE as usize * config.channels as usize {
         producer.try_push(0.0).ok();
     }
 
@@ -140,7 +139,7 @@ fn main() {
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
         EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
-        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
+        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 100.0, decay: 0.3, ping_pong: true}), enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
