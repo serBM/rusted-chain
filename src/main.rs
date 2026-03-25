@@ -97,13 +97,64 @@ impl Effect for Delay {
     }
 }
 
+struct Chorus {
+    delay_ms: f32,
+    depth_ms: f32,
+    lfo_frequency: f32,
+    lfo_phase: f32,
+    past_left_signal: Vec<f32>,
+    past_right_signal: Vec<f32>,
+}
+
+impl Effect for Chorus {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
+        // if delay_ms is 0.0 we clear the buffers and send dry signal directly
+        if self.delay_ms==0.0 {
+            self.past_left_signal.clear();
+            self.past_right_signal.clear();
+            return (left_signal,right_signal)
+        }
+        // get delayed signal or 0.0 if past_signal is still empty
+        let delayed_left = self.past_left_signal.get(0).copied().unwrap_or(0.0);
+        let delayed_right = self.past_right_signal.get(0).copied().unwrap_or(0.0);
+        // mix signal + delay
+        let left_output: f32 = left_signal + delayed_left;
+        let right_output: f32 = right_signal + delayed_right;
+        // push current signal to the buffer
+        self.past_left_signal.push(left_signal);
+        self.past_right_signal.push(right_signal);
+        // clean past_signal buffer
+        let left_current_delay_ms = self.delay_ms + (self.depth_ms * self.lfo_phase.sin());
+        let left_length = (SAMPLE_RATE as f32 / 1000.0 * left_current_delay_ms) as usize;
+        let right_current_delay_ms = self.delay_ms + (self.depth_ms * (self.lfo_phase + std::f32::consts::PI / 2.0).sin());
+        let right_length = (SAMPLE_RATE as f32 / 1000.0 * right_current_delay_ms) as usize;
+        while self.past_left_signal.len() > left_length {
+            self.past_left_signal.remove(0);
+        }
+        while self.past_right_signal.len() > right_length {
+            self.past_right_signal.remove(0);
+        }
+        // advance the phase
+        self.lfo_phase += 2.0 * std::f32::consts::PI * self.lfo_frequency / SAMPLE_RATE as f32;
+        self.lfo_phase = self.lfo_phase%(2.0*std::f32::consts::PI);
+        (
+            left_output,
+            right_output,
+        )
+    }
+    fn name(&self) -> &str {
+        "chorus"
+    }
+}
+
 struct EffectSlot {
     effect: Box<dyn Effect + Send>,
     enabled: bool,
+    wet: f32,
 }
 
 const SAMPLE_RATE: u32 = 44100;
-const BUFFER_SIZE: u32 = 512;
+const BUFFER_SIZE: u32 = 256;
 
 fn main() {
     let host = cpal::default_host();
@@ -137,9 +188,10 @@ fn main() {
 
     // Effects definition with their settings
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
-        EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
-        EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
-        EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 100.0, decay: 0.3, ping_pong: true}), enabled: true },
+        //EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
+        //EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
+        //EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
+        EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 40.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0}), wet: 1.0, enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
@@ -154,7 +206,9 @@ fn main() {
                     let mut right_signal = chunk[0];
                     for effect in effects_for_closure.lock().unwrap().iter_mut() {
                         if effect.enabled {
-                            (left_signal, right_signal) = effect.effect.process(left_signal, right_signal);
+                            let (processed_left, processed_right) = effect.effect.process(left_signal, right_signal);
+                            left_signal = (1.0 - effect.wet) * left_signal+ effect.wet * processed_left;
+                            right_signal = (1.0 - effect.wet) * right_signal + effect.wet * processed_right;
                         }
                     }
                     producer.try_push(left_signal).ok(); // left output
