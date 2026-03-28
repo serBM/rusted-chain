@@ -206,15 +206,17 @@ impl Effect for Chorus {
 struct Compressor {
     threshold: f32,
     ratio: f32,
-    attack: f32,
-    release: f32,
+    attack_ms: f32,
+    release_ms: f32,
     current_gain: f32,
 }
 
 impl Effect for Compressor {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
         let target_gain = if left_signal.abs().max(right_signal.abs()) < self.threshold {1.0} else {(self.threshold / left_signal.abs().max(right_signal.abs())).powf(1.0 - 1.0 / self.ratio)};
-        self.current_gain += if target_gain < self.current_gain {(target_gain - self.current_gain) * self.attack} else {(target_gain - self.current_gain) * self.release};
+        let attack_coeff = 1.0 - (-1.0 / (self.attack_ms / 1000.0 * SAMPLE_RATE as f32)).exp();
+        let release_coeff = 1.0 - (-1.0 / (self.release_ms / 1000.0 * SAMPLE_RATE as f32)).exp();
+        self.current_gain += if target_gain < self.current_gain {(target_gain - self.current_gain) * attack_coeff} else {(target_gain - self.current_gain) * release_coeff};
         (
             left_signal * self.current_gain,
             right_signal * self.current_gain,
@@ -224,17 +226,17 @@ impl Effect for Compressor {
         "compressor"
     }
     fn param_names(&self) -> Vec<&str> {
-        vec!["threshold", "ratio", "attack", "release"]
+        vec!["threshold", "ratio", "attack_ms", "release_ms"]
     }
     fn param_values(&self) -> Vec<String> {
-        vec![self.threshold.to_string(), self.ratio.to_string(), self.attack.to_string(), self.release.to_string()]
+        vec![self.threshold.to_string(), self.ratio.to_string(), self.attack_ms.to_string(), self.release_ms.to_string()]
     }
     fn adjust_param(&mut self, index: usize, delta: f32) {
         match index {
             0 => self.threshold = (self.threshold + delta * 0.05).clamp(0.0, 1.0),
             1 => self.ratio = (self.ratio + delta).max(1.0),
-            2 => self.attack = (self.attack + delta * 0.01).clamp(0.0, 1.0),
-            3 => self.release = (self.release + delta * 0.01).clamp(0.0, 1.0),
+            2 => self.attack_ms = (self.attack_ms + delta).max(0.1),
+            3 => self.release_ms = (self.release_ms + delta).max(0.1),
             _ => {}
         }
     }
@@ -250,6 +252,25 @@ struct Reverb {
 }
 
 impl Reverb {
+    fn resize(&mut self) {
+        let base_delays_ms = [30.0, 34.0, 39.0, 45.0_f32];
+        let sizes = base_delays_ms.map(|ms| (ms * self.room_size * SAMPLE_RATE as f32 / 1000.0) as usize);
+        self.left_comb_buffers = [
+            vec![0.0_f32; sizes[0]],
+            vec![0.0_f32; sizes[1]],
+            vec![0.0_f32; sizes[2]],
+            vec![0.0_f32; sizes[3]],
+        ];
+        self.right_comb_buffers = [
+            vec![0.0_f32; sizes[0]],
+            vec![0.0_f32; sizes[1]],
+            vec![0.0_f32; sizes[2]],
+            vec![0.0_f32; sizes[3]],
+        ];
+        self.left_comb_positions = [0; 4];
+        self.right_comb_positions = [0; 4];
+    }
+
     fn new(room_size: f32, decay: f32) -> Self {
         // compute buffer size, initialize buffers
         let base_delays_ms = [30.0, 34.0, 39.0, 45.0_f32];
@@ -312,7 +333,7 @@ impl Effect for Reverb {
     }
     fn adjust_param(&mut self, index: usize, delta: f32) {
         match index {
-            0 => self.room_size = (self.room_size + delta * 0.1).max(0.1),
+            0 => { self.room_size = (self.room_size + delta * 0.1).max(0.1); self.resize(); }
             1 => self.decay = (self.decay + delta * 0.05).clamp(0.0, 1.0),
             _ => {}
         }
@@ -385,12 +406,12 @@ fn main() {
         //EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
         //EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
         //EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 40.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0}), wet: 1.0, enabled: true },
-        //EffectSlot{ effect: Box::new(Compressor { threshold: 0.1, ratio: 20.0, attack: 0.5, release: 0.001, current_gain:1.0}), wet: 1.0, enabled: true },
+        //EffectSlot{ effect: Box::new(Compressor { threshold: 0.1, ratio: 20.0, attack_ms: 10.0, release_ms: 200.0, current_gain:1.0}), wet: 1.0, enabled: true },
         //EffectSlot{ effect: Box::new(Reverb::new(10.0,0.7)), wet: 1.0, enabled: true }
         // Shoegaze preset
         EffectSlot { effect: Box::new(Distortion { drive: 1.8, hard: false }), wet: 0.8, enabled: true },
         EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 1.8, lfo_frequency: 0.4, lfo_phase: 0.0}), wet: 1.0, enabled: true },
-        EffectSlot { effect: Box::new(Compressor { threshold: 0.7, ratio: 3.0, attack: 0.05, release: 0.005, current_gain: 1.0}), wet: 1.0, enabled: true },
+        EffectSlot { effect: Box::new(Compressor { threshold: 0.7, ratio: 3.0, attack_ms: 10.0, release_ms: 200.0, current_gain: 1.0}), wet: 1.0, enabled: true },
         EffectSlot { effect: Box::new(Reverb::new(2.5, 0.95)), wet: 1.0, enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
@@ -667,7 +688,7 @@ fn main() {
                             1 => Box::new(Bitcrusher { bit_depth: 8 }),
                             2 => Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 300.0, decay: 0.4, ping_pong: false }),
                             3 => Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0 }),
-                            4 => Box::new(Compressor { threshold: 0.7, ratio: 4.0, attack: 0.05, release: 0.005, current_gain: 1.0 }),
+                            4 => Box::new(Compressor { threshold: 0.7, ratio: 4.0, attack_ms: 10.0, release_ms: 200.0, current_gain: 1.0 }),
                             _ => Box::new(Reverb::new(1.0, 0.5)),
                         };
                         effects.lock().unwrap().push(EffectSlot { effect: new_effect, enabled: true, wet: 1.0 });
