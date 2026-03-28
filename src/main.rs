@@ -169,6 +169,72 @@ impl Effect for Compressor {
     }
 }
 
+struct Reverb {
+    room_size: f32,
+    decay: f32,
+    left_comb_buffers: [Vec<f32>; 4],
+    right_comb_buffers: [Vec<f32>; 4],
+    left_comb_positions: [usize; 4],
+    right_comb_positions: [usize; 4],
+}
+
+impl Reverb {
+    fn new(room_size: f32, decay: f32) -> Self {
+        // compute buffer size, initialize buffers
+        let base_delays_ms = [30.0, 34.0, 39.0, 45.0_f32];
+        let size0 = (base_delays_ms[0] * room_size * SAMPLE_RATE as f32 / 1000.0) as usize;
+        let size1 = (base_delays_ms[1] * room_size * SAMPLE_RATE as f32 / 1000.0) as usize;
+        let size2 = (base_delays_ms[2] * room_size * SAMPLE_RATE as f32 / 1000.0) as usize;
+        let size3 = (base_delays_ms[3] * room_size * SAMPLE_RATE as f32 / 1000.0) as usize;
+        Self {
+            room_size: room_size,
+            decay: decay,
+            left_comb_buffers: [
+                vec![0.0_f32; size0],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size1],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size2],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size3],
+            ],
+            right_comb_buffers: [
+                vec![0.0_f32; size0],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size1],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size2],                                                                                                                                                                                                                                                               
+                vec![0.0_f32; size3],
+            ],
+            left_comb_positions: [0 ; 4],
+            right_comb_positions: [0 ; 4],
+        }
+    }
+}
+
+impl Effect for Reverb {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
+        let mut left_sum = 0.0_f32;
+        let mut right_sum = 0.0_f32;
+        for i in 0..4 {
+            // left reverb
+            let left_delayed = self.left_comb_buffers[i][self.left_comb_positions[i]];
+            left_sum += left_delayed;
+            self.left_comb_buffers[i][self.left_comb_positions[i]] = left_signal + left_delayed * self.decay;
+            self.left_comb_positions[i] = (self.left_comb_positions[i] + 1) % self.left_comb_buffers[i].len();
+            // right reverb
+            let right_delayed = self.right_comb_buffers[i][self.right_comb_positions[i]];
+            right_sum += right_delayed;
+            self.right_comb_buffers[i][self.right_comb_positions[i]] = right_signal + right_delayed * self.decay;
+            self.right_comb_positions[i] = (self.right_comb_positions[i] + 1) % self.right_comb_buffers[i].len();
+        }
+        let left_reverbed_signal = left_sum / 4.0;
+        let right_reverbed_signal = right_sum / 4.0;
+        (
+            left_signal + left_reverbed_signal,
+            right_signal + right_reverbed_signal,
+        )
+    }
+    fn name(&self) -> &str {
+        "reverb"
+    }
+}
+
 struct EffectSlot {
     effect: Box<dyn Effect + Send>,
     enabled: bool,
@@ -213,8 +279,14 @@ fn main() {
         //EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         //EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
         //EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
-        EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 40.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0}), wet: 1.0, enabled: true },
-        EffectSlot{ effect: Box::new(Compressor { threshold: 0.1, ratio: 20.0, attack: 0.5, release: 0.001, current_gain:1.0}), wet: 1.0, enabled: true },
+        //EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 40.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0}), wet: 1.0, enabled: true },
+        //EffectSlot{ effect: Box::new(Compressor { threshold: 0.1, ratio: 20.0, attack: 0.5, release: 0.001, current_gain:1.0}), wet: 1.0, enabled: true },
+        //EffectSlot{ effect: Box::new(Reverb::new(10.0,0.7)), wet: 1.0, enabled: true }
+        // Shoegaze preset
+        EffectSlot { effect: Box::new(Distortion { drive: 1.8, hard: false }), wet: 0.8, enabled: true },
+        EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 1.8, lfo_frequency: 0.4, lfo_phase: 0.0}), wet: 1.0, enabled: true },
+        EffectSlot { effect: Box::new(Compressor { threshold: 0.7, ratio: 3.0, attack: 0.05, release: 0.005, current_gain: 1.0}), wet: 1.0, enabled: true },
+        EffectSlot { effect: Box::new(Reverb::new(2.5, 0.7)), wet: 1.0, enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
