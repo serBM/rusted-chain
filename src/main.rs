@@ -147,6 +147,28 @@ impl Effect for Chorus {
     }
 }
 
+struct Compressor {
+    threshold: f32,
+    ratio: f32,
+    attack: f32,
+    release: f32,
+    current_gain: f32,
+}
+
+impl Effect for Compressor {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32){
+        let target_gain = if left_signal.abs().max(right_signal.abs()) < self.threshold {1.0} else {(self.threshold / left_signal.abs().max(right_signal.abs())).powf(1.0 - 1.0 / self.ratio)};
+        self.current_gain += if target_gain < self.current_gain {(target_gain - self.current_gain) * self.attack} else {(target_gain - self.current_gain) * self.release};
+        (
+            left_signal * self.current_gain,
+            right_signal * self.current_gain,
+        )
+    }
+    fn name(&self) -> &str {
+        "compressor"
+    }
+}
+
 struct EffectSlot {
     effect: Box<dyn Effect + Send>,
     enabled: bool,
@@ -192,6 +214,7 @@ fn main() {
         //EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
         //EffectSlot { effect: Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 500.0, decay: 0.3, ping_pong: true}), enabled: true },
         EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 40.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0}), wet: 1.0, enabled: true },
+        EffectSlot{ effect: Box::new(Compressor { threshold: 0.1, ratio: 20.0, attack: 0.5, release: 0.001, current_gain:1.0}), wet: 1.0, enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
