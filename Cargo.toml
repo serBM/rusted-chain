@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 cpal = "0.15"
+crossterm = "0.29.0"
+ratatui = "0.30.0"
 ringbuf = "0.4"

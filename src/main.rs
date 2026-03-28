@@ -6,6 +6,9 @@ use std::sync::{Mutex, Arc};
 trait Effect {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32,f32);
     fn name(&self) -> &str;
+    fn param_names(&self) -> Vec<&str>;
+    fn param_values(&self) -> Vec<String>;
+    fn adjust_param(&mut self, index: usize, delta: f32);
 }
 
 struct Distortion {
@@ -30,6 +33,19 @@ impl Effect for Distortion {
     fn name(&self) -> &str {
         "distortion"
     }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["drive", "hard"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.drive.to_string(), self.hard.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.drive = (self.drive + delta * 0.1).max(0.0),
+            1 => self.hard = !self.hard,
+            _ => {}
+        }
+    }
 }
 
 struct Bitcrusher {
@@ -46,6 +62,18 @@ impl Effect for Bitcrusher {
     }
     fn name(&self) -> &str {
         "bitcrusher"
+    }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["bit_depth"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.bit_depth.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, _delta: f32) {
+        match index {
+            0 => self.bit_depth = (self.bit_depth as i32 + _delta as i32).max(1) as u32,
+            _ => {}
+        }
     }
 }
 
@@ -94,6 +122,20 @@ impl Effect for Delay {
     }
     fn name(&self) -> &str {
         "delay"
+    }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["delay_ms", "decay", "ping_pong"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.delay_ms.to_string(), self.decay.to_string(), self.ping_pong.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.delay_ms = (self.delay_ms + delta * 10.0).max(0.0),
+            1 => self.decay = (self.decay + delta * 0.05).clamp(0.0, 1.0),
+            2 => self.ping_pong = !self.ping_pong,
+            _ => {}
+        }
     }
 }
 
@@ -145,6 +187,20 @@ impl Effect for Chorus {
     fn name(&self) -> &str {
         "chorus"
     }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["delay_ms", "depth_ms", "lfo_frequency"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.delay_ms.to_string(), self.depth_ms.to_string(), self.lfo_frequency.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.delay_ms = (self.delay_ms + delta * 5.0).max(0.0),
+            1 => self.depth_ms = (self.depth_ms + delta * 0.1).max(0.0),
+            2 => self.lfo_frequency = (self.lfo_frequency + delta * 0.1).max(0.0),
+            _ => {}
+        }
+    }
 }
 
 struct Compressor {
@@ -166,6 +222,21 @@ impl Effect for Compressor {
     }
     fn name(&self) -> &str {
         "compressor"
+    }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["threshold", "ratio", "attack", "release"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.threshold.to_string(), self.ratio.to_string(), self.attack.to_string(), self.release.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.threshold = (self.threshold + delta * 0.05).clamp(0.0, 1.0),
+            1 => self.ratio = (self.ratio + delta).max(1.0),
+            2 => self.attack = (self.attack + delta * 0.01).clamp(0.0, 1.0),
+            3 => self.release = (self.release + delta * 0.01).clamp(0.0, 1.0),
+            _ => {}
+        }
     }
 }
 
@@ -233,6 +304,19 @@ impl Effect for Reverb {
     fn name(&self) -> &str {
         "reverb"
     }
+    fn param_names(&self) -> Vec<&str> {
+        vec!["room_size", "decay"]
+    }
+    fn param_values(&self) -> Vec<String> {
+        vec![self.room_size.to_string(), self.decay.to_string()]
+    }
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.room_size = (self.room_size + delta * 0.1).max(0.1),
+            1 => self.decay = (self.decay + delta * 0.05).clamp(0.0, 1.0),
+            _ => {}
+        }
+    }
 }
 
 struct EffectSlot {
@@ -241,8 +325,26 @@ struct EffectSlot {
     wet: f32,
 }
 
+// Ratatui
+#[derive(PartialEq)]
+enum Panel {
+    Left,
+    Right,
+}
+
+struct AppState {
+    focused_panel: Panel,
+    list_state: ratatui::widgets::ListState,
+    selected_effect: usize,
+    selected_parameter: usize,
+    grabbing: bool,
+    show_popup: bool,
+    popup_selected: usize,
+}
+
 const SAMPLE_RATE: u32 = 44100;
 const BUFFER_SIZE: u32 = 256;
+const AVAILABLE_EFFECTS: &[&str] = &["distortion", "bitcrusher", "delay", "chorus", "compressor", "reverb"];
 
 fn main() {
     let host = cpal::default_host();
@@ -275,6 +377,9 @@ fn main() {
     }
 
     // Effects definition with their settings
+    let volume: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
+    let volume_for_closure = Arc::clone(&volume);
+
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(vec![
         //EffectSlot { effect: Box::new(Bitcrusher { bit_depth: 32 }), enabled: true },
         //EffectSlot { effect: Box::new(Distortion { drive: 7.0, hard: true }), enabled: true },
@@ -286,7 +391,7 @@ fn main() {
         EffectSlot { effect: Box::new(Distortion { drive: 1.8, hard: false }), wet: 0.8, enabled: true },
         EffectSlot { effect: Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 1.8, lfo_frequency: 0.4, lfo_phase: 0.0}), wet: 1.0, enabled: true },
         EffectSlot { effect: Box::new(Compressor { threshold: 0.7, ratio: 3.0, attack: 0.05, release: 0.005, current_gain: 1.0}), wet: 1.0, enabled: true },
-        EffectSlot { effect: Box::new(Reverb::new(2.5, 0.7)), wet: 1.0, enabled: true },
+        EffectSlot { effect: Box::new(Reverb::new(2.5, 0.95)), wet: 1.0, enabled: true },
     ]));
     let effects_for_closure = Arc::clone(&effects);
 
@@ -306,8 +411,9 @@ fn main() {
                             right_signal = (1.0 - effect.wet) * right_signal + effect.wet * processed_right;
                         }
                     }
-                    producer.try_push(left_signal).ok(); // left output
-                    producer.try_push(right_signal).ok(); // right output
+                    let vol = *volume_for_closure.lock().unwrap();
+                    producer.try_push(left_signal * vol).ok(); // left output
+                    producer.try_push(right_signal * vol).ok(); // right output
                 }
             },
             |err| eprintln!("Input error: {}", err),
@@ -334,21 +440,244 @@ fn main() {
     input_stream.play().expect("Failed to start input stream");
     output_stream.play().expect("Failed to start output stream");
 
-    println!("Audio passthrough running. Press Enter to stop.");
+    println!("Audio passthrough running");
+    
+    // Ratatui
+    let mut state = AppState { focused_panel: Panel::Left, list_state: ratatui::widgets::ListState::default(), selected_effect: 0, selected_parameter: 0, grabbing: false, show_popup: false, popup_selected: 0 };
+    state.list_state.select(Some(0));
 
-    // Loop listening to user input to change effects
+    crossterm::terminal::enable_raw_mode().unwrap();
+    crossterm::execute!(std::io::stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All)).unwrap();
+    let mut terminal = ratatui::Terminal::new(
+      ratatui::backend::CrosstermBackend::new(std::io::stdout())
+    ).unwrap();
+
     loop {
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim();
-
-        if input == "quit" {
-            break; // exit the loop
-        } else if input == "e" {
-            for effect in effects.lock().unwrap().iter_mut() {
-                effect.enabled = !effect.enabled ;
-                println!("{}: {}", effect.effect.name(), effect.enabled);
+        terminal.draw(|frame| {
+            let effects_lock = effects.lock().unwrap();
+            let items: Vec<ratatui::widgets::ListItem> = effects_lock
+            .iter()
+            .enumerate()
+            .map(|(i, e)| {
+                let item = ratatui::widgets::ListItem::new(e.effect.name());
+                if state.grabbing && i == state.selected_effect {
+                    item.style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+                } else {
+                    item
+                }
+            })
+            .collect();
+            let highlight_style = ratatui::style::Style::default().fg(ratatui::style::Color::Yellow);
+            let normal_style = ratatui::style::Style::default();
+            let param_items: Vec<ratatui::widgets::ListItem> = if effects_lock.is_empty() {
+                vec![]
+            } else {
+                let selected_slot = &effects_lock[state.selected_effect];
+                let wet_item = ratatui::widgets::ListItem::new(format!("wet: {}", selected_slot.wet))
+                    .style(if state.focused_panel == Panel::Right && state.selected_parameter == 0 { highlight_style } else { normal_style });
+                let mut items = vec![wet_item];
+                let names = selected_slot.effect.param_names();
+                let values = selected_slot.effect.param_values();
+                items.extend(
+                    names.iter().zip(values.iter()).enumerate()
+                        .map(|(i, (name, value))| {
+                            ratatui::widgets::ListItem::new(format!("{}: {}", name, value))
+                                .style(if state.focused_panel == Panel::Right && state.selected_parameter == i + 1 { highlight_style } else { normal_style })
+                        })
+                );
+                items
+            };
+            let vertical = ratatui::layout::Layout::default()
+                .direction(ratatui::layout::Direction::Vertical)
+                .constraints([
+                    ratatui::layout::Constraint::Length(3),
+                    ratatui::layout::Constraint::Min(0),
+                    ratatui::layout::Constraint::Length(3),
+                ])
+                .split(frame.area());
+            let key_style = ratatui::style::Style::default().fg(ratatui::style::Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD);
+            let desc_style = ratatui::style::Style::default();
+            let keybind_pairs: &[(&str, &str)] = if state.show_popup {
+                &[("↑↓", "navigate"), ("Enter", "confirm"), ("Esc", "cancel")]
+            } else if state.focused_panel == Panel::Left {
+                &[("↑↓", "navigate"), ("Enter", "grab/release"), ("Del", "delete"), ("A", "add"), ("Tab", "switch panel"), ("Q", "quit")]
+            } else {
+                &[("↑↓", "navigate"), ("←→", "change value"), ("Tab", "switch panel"), ("Q", "quit")]
+            };
+            let keybind_spans: Vec<ratatui::text::Span> = keybind_pairs.iter().flat_map(|(key, desc)| {
+                vec![
+                    ratatui::text::Span::styled(format!(" {} ", key), key_style),
+                    ratatui::text::Span::styled(format!("{} ", desc), desc_style),
+                ]
+            }).collect();
+            frame.render_widget(
+                ratatui::widgets::Paragraph::new(ratatui::text::Line::from(keybind_spans))
+                    .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)),
+                vertical[0],
+            );
+            let areas = ratatui::layout::Layout::default()
+                .direction(ratatui::layout::Direction::Horizontal)
+                .constraints([
+                    ratatui::layout::Constraint::Percentage(30),
+                    ratatui::layout::Constraint::Percentage(70),
+                ])
+                .split(vertical[1]);
+            let vol = *volume.lock().unwrap();
+            frame.render_widget(
+                ratatui::widgets::Paragraph::new(format!("Volume: {:.2}", vol))
+                    .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)),
+                vertical[2],
+            );
+            let left_border_style = if state.focused_panel == Panel::Left { highlight_style } else { normal_style };
+            let right_border_style = if state.focused_panel == Panel::Right { highlight_style } else { normal_style };
+            frame.render_widget(
+                ratatui::widgets::List::new(param_items)
+                    .block(ratatui::widgets::Block::default().title("Parameters").borders(ratatui::widgets::Borders::ALL).border_style(right_border_style)),
+                areas[1],
+            );
+            frame.render_stateful_widget(
+        ratatui::widgets::List::new(items)
+                    .block(ratatui::widgets::Block::default().title("Effects").borders(ratatui::widgets::Borders::ALL).border_style(left_border_style))
+                    .highlight_symbol(">> "),
+                areas[0],
+                &mut state.list_state,
+            );
+            if state.show_popup {
+                let popup_items: Vec<ratatui::widgets::ListItem> = AVAILABLE_EFFECTS.iter().enumerate()
+                    .map(|(i, name)| {
+                        ratatui::widgets::ListItem::new(*name)
+                            .style(if i == state.popup_selected { highlight_style } else { normal_style })
+                    })
+                    .collect();
+                let popup_area = ratatui::layout::Rect {
+                    x: frame.area().width / 4,
+                    y: frame.area().height / 4,
+                    width: frame.area().width / 2,
+                    height: AVAILABLE_EFFECTS.len() as u16 + 2,
+                };
+                frame.render_widget(ratatui::widgets::Clear, popup_area);
+                frame.render_widget(
+                    ratatui::widgets::List::new(popup_items)
+                        .block(ratatui::widgets::Block::default().title("Add Effect").borders(ratatui::widgets::Borders::ALL)),
+                    popup_area,
+                );
             }
-        }
+        }).unwrap();
+                                                                                                                                                                                                                                                                                            
+        if crossterm::event::poll(std::time::Duration::from_millis(16)).unwrap() {
+            if let crossterm::event::Event::Key(key) = crossterm::event::read().unwrap() {
+                if key.code == crossterm::event::KeyCode::Char('q') || (key.code == crossterm::event::KeyCode::Char('c') && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)) {
+                    crossterm::terminal::disable_raw_mode().unwrap();
+                    break;
+                }
+                if !state.show_popup {
+                if key.code == crossterm::event::KeyCode::Enter && state.focused_panel == Panel::Left {
+                    state.grabbing = !state.grabbing;
+                }
+                if key.code == crossterm::event::KeyCode::Up && !effects.lock().unwrap().is_empty() {
+                    if state.focused_panel == Panel::Left {
+                        if state.grabbing {
+                            let mut effects_lock = effects.lock().unwrap();
+                            if state.selected_effect > 0 {
+                                effects_lock.swap(state.selected_effect, state.selected_effect - 1);
+                                state.selected_effect -= 1;
+                                state.list_state.select(Some(state.selected_effect));
+                            }
+                        } else {
+                            if state.selected_effect > 0 { state.selected_effect -= 1; } else { state.selected_effect = effects.lock().unwrap().len() - 1; }
+                            state.list_state.select(Some(state.selected_effect));
+                        }
+                    } else if state.focused_panel == Panel::Right {
+                        let param_count = 1 + effects.lock().unwrap()[state.selected_effect].effect.param_names().len();
+                        if state.selected_parameter > 0 { state.selected_parameter -= 1; } else { state.selected_parameter = param_count - 1; }
+                    }
+                }
+                if key.code == crossterm::event::KeyCode::Down && !effects.lock().unwrap().is_empty() {
+                    if state.focused_panel == Panel::Left {
+                        if state.grabbing {
+                            let mut effects_lock = effects.lock().unwrap();
+                            if state.selected_effect < effects_lock.len() - 1 {
+                                effects_lock.swap(state.selected_effect, state.selected_effect + 1);
+                                state.selected_effect += 1;
+                                state.list_state.select(Some(state.selected_effect));
+                            }
+                        } else {
+                            if state.selected_effect < effects.lock().unwrap().len() - 1 { state.selected_effect += 1; } else { state.selected_effect = 0; }
+                            state.list_state.select(Some(state.selected_effect));
+                        }
+                    } else if state.focused_panel == Panel::Right {
+                        let param_count = 1 + effects.lock().unwrap()[state.selected_effect].effect.param_names().len();
+                        if state.selected_parameter < param_count - 1 { state.selected_parameter += 1; } else { state.selected_parameter = 0; }
+                    }
+                }
+                if key.code == crossterm::event::KeyCode::Left && state.focused_panel == Panel::Right && !effects.lock().unwrap().is_empty() {
+                    let mut effects_lock = effects.lock().unwrap();
+                    let slot = &mut effects_lock[state.selected_effect];
+                    if state.selected_parameter == 0 {
+                        slot.wet = (slot.wet - 0.05).clamp(0.0, 1.0);
+                    } else {
+                        slot.effect.adjust_param(state.selected_parameter - 1, -1.0);
+                    }
+                }
+                if key.code == crossterm::event::KeyCode::Right && state.focused_panel == Panel::Right && !effects.lock().unwrap().is_empty() {
+                    let mut effects_lock = effects.lock().unwrap();
+                    let slot = &mut effects_lock[state.selected_effect];
+                    if state.selected_parameter == 0 {
+                        slot.wet = (slot.wet + 0.05).clamp(0.0, 1.0);
+                    } else {
+                        slot.effect.adjust_param(state.selected_parameter - 1, 1.0);
+                    }
+                }
+                if key.code == crossterm::event::KeyCode::PageUp {
+                    let mut vol = volume.lock().unwrap();
+                    *vol = (*vol + 0.05).min(2.0);
+                }
+                if key.code == crossterm::event::KeyCode::PageDown {
+                    let mut vol = volume.lock().unwrap();
+                    *vol = (*vol - 0.05).max(0.0);
+                }
+                if key.code == crossterm::event::KeyCode::Delete && state.focused_panel == Panel::Left {
+                    let mut effects_lock = effects.lock().unwrap();
+                    if !effects_lock.is_empty() {
+                        effects_lock.remove(state.selected_effect);
+                        if state.selected_effect >= effects_lock.len() && state.selected_effect > 0 {
+                            state.selected_effect -= 1;
+                        }
+                        state.list_state.select(Some(state.selected_effect));
+                    }
+                }
+                } // end !show_popup
+                if key.code == crossterm::event::KeyCode::Char('a') && state.focused_panel == Panel::Left && !state.show_popup {
+                    state.show_popup = true;
+                    state.popup_selected = 0;
+                }
+                if state.show_popup {
+                    if key.code == crossterm::event::KeyCode::Esc {
+                        state.show_popup = false;
+                    }
+                    if key.code == crossterm::event::KeyCode::Up {
+                        if state.popup_selected > 0 { state.popup_selected -= 1; } else { state.popup_selected = AVAILABLE_EFFECTS.len() - 1; }
+                    }
+                    if key.code == crossterm::event::KeyCode::Down {
+                        if state.popup_selected < AVAILABLE_EFFECTS.len() - 1 { state.popup_selected += 1; } else { state.popup_selected = 0; }
+                    }
+                    if key.code == crossterm::event::KeyCode::Enter {
+                        let new_effect: Box<dyn Effect + Send> = match state.popup_selected {
+                            0 => Box::new(Distortion { drive: 2.0, hard: false }),
+                            1 => Box::new(Bitcrusher { bit_depth: 8 }),
+                            2 => Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 300.0, decay: 0.4, ping_pong: false }),
+                            3 => Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0 }),
+                            4 => Box::new(Compressor { threshold: 0.7, ratio: 4.0, attack: 0.05, release: 0.005, current_gain: 1.0 }),
+                            _ => Box::new(Reverb::new(1.0, 0.5)),
+                        };
+                        effects.lock().unwrap().push(EffectSlot { effect: new_effect, enabled: true, wet: 1.0 });
+                        state.show_popup = false;
+                    }
+                }
+                if key.code == crossterm::event::KeyCode::Tab && !state.show_popup {
+                    state.focused_panel = if state.focused_panel == Panel::Left {Panel::Right} else {Panel::Left};
+                }
+            }
+        }                                                                                                                                                                                                                                                                                   
     }
 }
