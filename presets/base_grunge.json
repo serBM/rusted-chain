@@ -1,0 +1,25 @@
+{
+  "name": "grunge",
+  "slots": [
+    {
+      "effect": { "Distortion": { "drive": 5.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Distortion": { "drive": 1.8, "hard": true } },
+      "wet": 0.4,
+      "enabled": true
+    },
+    {
+      "effect": { "Compressor": { "threshold": 0.5, "ratio": 4.0, "attack_ms": 8.0, "release_ms": 120.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 1.0, "decay": 0.5 } },
+      "wet": 0.4,
+      "enabled": true
+    }
+  ]
+}

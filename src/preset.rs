@@ -1,4 +1,5 @@
 use crate::effects::{Effect, EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb};
+use std::path::PathBuf;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum PresetEffect {
@@ -46,4 +47,8 @@ pub fn preset_to_effects(preset: Preset) -> Vec<EffectSlot> {
         };
         EffectSlot { effect, wet: slot.wet, enabled: slot.enabled }
     }).collect()
+}
+
+pub fn preset_dir() -> PathBuf {
+    dirs::home_dir().unwrap().join(".guitar_fx")
 }

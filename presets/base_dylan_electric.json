@@ -1,0 +1,20 @@
+{
+  "name": "dylan_electric",
+  "slots": [
+    {
+      "effect": { "Distortion": { "drive": 2.8, "hard": true } },
+      "wet": 0.85,
+      "enabled": true
+    },
+    {
+      "effect": { "Compressor": { "threshold": 0.75, "ratio": 2.0, "attack_ms": 30.0, "release_ms": 200.0 } },
+      "wet": 0.8,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 0.8, "decay": 0.45 } },
+      "wet": 0.35,
+      "enabled": true
+    }
+  ]
+}

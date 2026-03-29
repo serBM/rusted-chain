@@ -1,0 +1,30 @@
+{
+  "name": "gilmour",
+  "slots": [
+    {
+      "effect": { "Distortion": { "drive": 1.4, "hard": false } },
+      "wet": 0.5,
+      "enabled": true
+    },
+    {
+      "effect": { "Compressor": { "threshold": 0.6, "ratio": 3.0, "attack_ms": 20.0, "release_ms": 300.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Chorus": { "delay_ms": 20.0, "depth_ms": 1.5, "lfo_frequency": 0.6 } },
+      "wet": 0.4,
+      "enabled": true
+    },
+    {
+      "effect": { "Delay": { "delay_ms": 500.0, "decay": 0.45, "ping_pong": true } },
+      "wet": 0.65,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 2.0, "decay": 0.72 } },
+      "wet": 0.7,
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "petrucci",
+  "slots": [
+    {
+      "effect": { "Distortion": { "drive": 6.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Compressor": { "threshold": 0.35, "ratio": 6.0, "attack_ms": 5.0, "release_ms": 100.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Chorus": { "delay_ms": 22.0, "depth_ms": 2.5, "lfo_frequency": 0.8 } },
+      "wet": 0.5,
+      "enabled": true
+    },
+    {
+      "effect": { "Delay": { "delay_ms": 350.0, "decay": 0.3, "ping_pong": false } },
+      "wet": 0.4,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 1.5, "decay": 0.6 } },
+      "wet": 0.5,
+      "enabled": true
+    }
+  ]
+}

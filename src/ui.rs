@@ -213,7 +213,7 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                             let name = state.input_buffer.trim().to_string();
                             if !name.is_empty() {
                                 let preset = effects_to_preset(name.clone(), &effects.lock().unwrap());
-                                let dir = dirs::home_dir().unwrap().join(".guitar_fx");
+                                let dir = crate::preset::preset_dir();
                                 std::fs::create_dir_all(&dir).unwrap();
                                 let path = dir.join(format!("{}.json", name));
                                 std::fs::write(path, serde_json::to_string_pretty(&preset).unwrap()).unwrap();
@@ -307,7 +307,7 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                     state.input_buffer.clear();
                 }
                 if key.code == crossterm::event::KeyCode::Char('l') && !state.show_popup && !state.input_mode && !state.show_load_popup {
-                    let dir = dirs::home_dir().unwrap().join(".guitar_fx");
+                    let dir = crate::preset::preset_dir();
                     let files: Vec<String> = std::fs::read_dir(&dir).ok()
                         .into_iter().flatten()
                         .filter_map(|e| e.ok())
@@ -330,7 +330,7 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                     }
                     if key.code == crossterm::event::KeyCode::Enter && !state.load_popup_files.is_empty() {
                         let name = &state.load_popup_files[state.load_popup_selected];
-                        let path = dirs::home_dir().unwrap().join(".guitar_fx").join(format!("{}.json", name));
+                        let path = crate::preset::preset_dir().join(format!("{}.json", name));
                         if let Ok(contents) = std::fs::read_to_string(path) {
                             if let Ok(preset) = serde_json::from_str::<Preset>(&contents) {
                                 *effects.lock().unwrap() = preset_to_effects(preset);

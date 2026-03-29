@@ -1,0 +1,25 @@
+{
+  "name": "metallica",
+  "slots": [
+    {
+      "effect": { "Distortion": { "drive": 7.0, "hard": true } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Distortion": { "drive": 2.0, "hard": false } },
+      "wet": 0.3,
+      "enabled": true
+    },
+    {
+      "effect": { "Compressor": { "threshold": 0.4, "ratio": 8.0, "attack_ms": 3.0, "release_ms": 80.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 0.6, "decay": 0.4 } },
+      "wet": 0.3,
+      "enabled": true
+    }
+  ]
+}

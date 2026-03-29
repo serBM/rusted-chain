@@ -9,6 +9,17 @@ use std::sync::{Mutex, Arc};
 use effects::{EffectSlot, SAMPLE_RATE, BUFFER_SIZE};
 
 fn main() {
+   // Preset loading
+   for preset in std::env::current_dir().unwrap().join("presets").read_dir().unwrap() {
+        let entry = preset.unwrap();
+        let filename = entry.file_name();
+        let destination = crate::preset::preset_dir().join(filename);
+        if !destination.exists() {
+            std::fs::copy(entry.path(),destination)
+            .expect("Failed to copy preset");
+       }
+   }
+
     let host = cpal::default_host();
 
     let input_device = host
@@ -28,8 +39,8 @@ fn main() {
         buffer_size: cpal::BufferSize::Fixed(BUFFER_SIZE),
     };
 
-    // Ring buffer: holds 4x the buffer size to absorb timing differences between streams
-    let latency_samples = BUFFER_SIZE as usize * config.channels as usize * 4;
+    // Ring buffer: holds 8x the buffer size to absorb timing differences between streams
+    let latency_samples = BUFFER_SIZE as usize * config.channels as usize * 8;
     let rb = HeapRb::<f32>::new(latency_samples);
     let (mut producer, mut consumer) = rb.split();
 
