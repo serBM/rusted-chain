@@ -10,6 +10,7 @@ use effects::{EffectSlot, SAMPLE_RATE, BUFFER_SIZE};
 
 fn main() {
    // Preset loading
+   std::fs::create_dir_all(crate::preset::preset_dir()).unwrap();
    for preset in std::env::current_dir().unwrap().join("presets").read_dir().unwrap() {
         let entry = preset.unwrap();
         let filename = entry.file_name();
