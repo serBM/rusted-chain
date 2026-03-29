@@ -1,4 +1,4 @@
-# guitar_fx
+# rusted-chain
 
 A real-time guitar pedalboard written in Rust, with a terminal UI built with [ratatui](https://github.com/ratatui-org/ratatui).
 
@@ -24,10 +24,11 @@ cargo run --release
 - Chorus
 - Compressor
 - Reverb
+- Tremolo
 
 ## Presets
 
-Presets are stored as JSON files in `~/.guitar_fx/`. They can be saved and loaded directly from the UI.
+Presets are stored as JSON files in `~/.rusted-chain/`. They can be saved and loaded directly from the UI.
 
 ## Keybindings
 

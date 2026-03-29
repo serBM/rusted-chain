@@ -52,5 +52,5 @@ pub fn preset_to_effects(preset: Preset) -> Vec<EffectSlot> {
 }
 
 pub fn preset_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(".guitar_fx")
+    dirs::home_dir().unwrap().join(".rusted-chain")
 }

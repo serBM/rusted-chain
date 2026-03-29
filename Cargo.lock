@@ -623,19 +623,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
-name = "guitar_fx"
-version = "0.1.0"
-dependencies = [
- "cpal",
- "crossterm",
- "dirs",
- "ratatui",
- "ringbuf",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1462,6 +1449,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
+]
+
+[[package]]
+name = "rusted-chain"
+version = "0.1.0"
+dependencies = [
+ "cpal",
+ "crossterm",
+ "dirs",
+ "ratatui",
+ "ringbuf",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
