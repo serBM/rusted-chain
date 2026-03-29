@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use crate::effects::{EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb, Effect, AVAILABLE_EFFECTS};
+use crate::effects::{EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo, Effect, AVAILABLE_EFFECTS};
 use crate::preset::{Preset, effects_to_preset, preset_to_effects};
 
 #[derive(PartialEq)]
@@ -225,7 +225,7 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                         crossterm::event::KeyCode::Char(c) => { state.input_buffer.push(c); }
                         _ => {}
                     }
-                } else if !state.show_popup {
+                } else if !state.show_popup && !state.show_load_popup {
                     if key.code == crossterm::event::KeyCode::Enter && state.focused_panel == Panel::Left {
                         state.grabbing = !state.grabbing;
                     }
@@ -362,7 +362,8 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                             2 => Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 300.0, decay: 0.4, ping_pong: false }),
                             3 => Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0 }),
                             4 => Box::new(Compressor { threshold: 0.7, ratio: 4.0, attack_ms: 10.0, release_ms: 200.0, current_gain: 1.0 }),
-                            _ => Box::new(Reverb::new(1.0, 0.5)),
+                            5 => Box::new(Reverb::new(1.0, 0.5)),
+                            _ => Box::new(Tremolo {depth: 0.4, lfo_frequency: 1.0, lfo_phase: 1.0}),
                         };
                         effects.lock().unwrap().push(EffectSlot { effect: new_effect, enabled: true, wet: 1.0 });
                         state.show_popup = false;

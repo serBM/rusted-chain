@@ -17,6 +17,11 @@
       "enabled": true
     },
     {
+      "effect": { "Tremolo": { "depth": 0.4, "lfo_frequency": 1.2 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
       "effect": { "Delay": { "delay_ms": 500.0, "decay": 0.45, "ping_pong": true } },
       "wet": 0.65,
       "enabled": true

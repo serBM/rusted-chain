@@ -14,10 +14,8 @@ fn main() {
         let entry = preset.unwrap();
         let filename = entry.file_name();
         let destination = crate::preset::preset_dir().join(filename);
-        if !destination.exists() {
-            std::fs::copy(entry.path(),destination)
+        std::fs::copy(entry.path(),destination)
             .expect("Failed to copy preset");
-       }
    }
 
     let host = cpal::default_host();

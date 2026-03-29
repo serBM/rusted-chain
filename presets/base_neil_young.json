@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "effect": { "Tremolo": { "depth": 0.3, "lfo_frequency": 0.6 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
       "effect": { "Reverb": { "room_size": 1.2, "decay": 0.55 } },
       "wet": 0.45,
       "enabled": true

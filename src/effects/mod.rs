@@ -2,7 +2,7 @@ use crate::preset::PresetEffect;
 
 pub const SAMPLE_RATE: u32 = 48000;
 pub const BUFFER_SIZE: u32 = 256;
-pub const AVAILABLE_EFFECTS: &[&str] = &["distortion", "bitcrusher", "delay", "chorus", "compressor", "reverb"];
+pub const AVAILABLE_EFFECTS: &[&str] = &["distortion", "bitcrusher", "delay", "chorus", "compressor", "reverb", "tremolo"];
 
 pub trait Effect {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32, f32);
@@ -357,5 +357,49 @@ impl Effect for Reverb {
     }
     fn to_preset(&self) -> PresetEffect {
         PresetEffect::Reverb { room_size: self.room_size, decay: self.decay }
+    }
+}
+pub struct Tremolo {
+    pub depth: f32,
+    pub lfo_frequency: f32,
+    pub lfo_phase: f32,
+}
+
+impl Effect for Tremolo {
+    fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32, f32) {
+        // mix signal + delay
+        let left_output = left_signal * (1.0 - self.depth * (1.0 - self.lfo_phase.sin()) / 2.0 );
+        let right_output = right_signal * (1.0 - self.depth * (1.0 - self.lfo_phase.sin()) / 2.0 );
+        // advance the phase
+        self.lfo_phase += 2.0 * std::f32::consts::PI * self.lfo_frequency / SAMPLE_RATE as f32;
+        self.lfo_phase = self.lfo_phase % (2.0 * std::f32::consts::PI);
+        (
+            left_output, 
+            right_output
+        )
+    }
+
+    fn name(&self) -> &str {
+        "tremolo"
+    }
+
+    fn param_names(&self) -> Vec<&str> {
+        vec!["depth", "lfo_frequency"]
+    }
+
+    fn param_values(&self) -> Vec<String> {
+        vec![self.depth.to_string(), self.lfo_frequency.to_string()]
+    }
+
+    fn adjust_param(&mut self, index: usize, delta: f32) {
+        match index {
+            0 => self.depth = (self.depth + delta * 0.05).clamp(0.0, 1.0),
+            1 => self.lfo_frequency = (self.lfo_frequency + delta * 0.1).max(0.0),
+            _ => {}
+        }
+    }
+
+    fn to_preset(&self) -> PresetEffect {
+        PresetEffect::Tremolo {depth: self.depth, lfo_frequency: self.lfo_frequency}
     }
 }

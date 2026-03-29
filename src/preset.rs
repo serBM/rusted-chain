@@ -1,4 +1,4 @@
-use crate::effects::{Effect, EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb};
+use crate::effects::{Effect, EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo};
 use std::path::PathBuf;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -9,6 +9,7 @@ pub enum PresetEffect {
     Chorus { delay_ms: f32, depth_ms: f32, lfo_frequency: f32 },
     Compressor { threshold: f32, ratio: f32, attack_ms: f32, release_ms: f32 },
     Reverb { room_size: f32, decay: f32 },
+    Tremolo { depth: f32, lfo_frequency: f32},
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -44,6 +45,7 @@ pub fn preset_to_effects(preset: Preset) -> Vec<EffectSlot> {
             PresetEffect::Chorus { delay_ms, depth_ms, lfo_frequency } => Box::new(Chorus { delay_ms, depth_ms, lfo_frequency, lfo_phase: 0.0, past_left_signal: Vec::new(), past_right_signal: Vec::new() }),
             PresetEffect::Compressor { threshold, ratio, attack_ms, release_ms } => Box::new(Compressor { threshold, ratio, attack_ms, release_ms, current_gain: 1.0 }),
             PresetEffect::Reverb { room_size, decay } => Box::new(Reverb::new(room_size, decay)),
+            PresetEffect::Tremolo { depth, lfo_frequency} => Box::new(Tremolo { depth, lfo_frequency, lfo_phase: 0.0 }),
         };
         EffectSlot { effect, wet: slot.wet, enabled: slot.enabled }
     }).collect()
