@@ -1,0 +1,40 @@
+{
+  "name": "landscapes",
+  "slots": [
+    {
+      "effect": { "Compressor": { "threshold": 0.75, "ratio": 2.5, "attack_ms": 40.0, "release_ms": 600.0 } },
+      "wet": 0.8,
+      "enabled": true
+    },
+    {
+      "effect": { "Chorus": { "delay_ms": 30.0, "depth_ms": 3.0, "lfo_frequency": 0.2 } },
+      "wet": 0.5,
+      "enabled": true
+    },
+    {
+      "effect": { "Chorus": { "delay_ms": 14.0, "depth_ms": 1.0, "lfo_frequency": 0.7 } },
+      "wet": 0.3,
+      "enabled": true
+    },
+    {
+      "effect": { "Tremolo": { "depth": 0.25, "lfo_frequency": 0.4 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Delay": { "delay_ms": 750.0, "decay": 0.6, "ping_pong": true } },
+      "wet": 0.6,
+      "enabled": true
+    },
+    {
+      "effect": { "Delay": { "delay_ms": 1500.0, "decay": 0.5, "ping_pong": false } },
+      "wet": 0.35,
+      "enabled": true
+    },
+    {
+      "effect": { "Reverb": { "room_size": 4.0, "decay": 0.85 } },
+      "wet": 0.8,
+      "enabled": true
+    }
+  ]
+}
