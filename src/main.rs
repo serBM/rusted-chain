@@ -52,6 +52,9 @@ fn main() {
     let volume: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
     let volume_for_closure = Arc::clone(&volume);
 
+    let global_wet: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
+    let global_wet_for_closure = Arc::clone(&global_wet);
+
     let effects: Arc<Mutex<Vec<EffectSlot>>> = Arc::new(Mutex::new(Vec::new()));
     let effects_for_closure = Arc::clone(&effects);
 
@@ -61,9 +64,13 @@ fn main() {
         .build_input_stream(
             &config,
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                let vol = *volume_for_closure.lock().unwrap();
+                let wet = *global_wet_for_closure.lock().unwrap();
                 for chunk in data.chunks(2) { // chunk = [left, right]
-                    let mut left_signal = chunk[0];
-                    let mut right_signal = chunk[0];
+                    let dry_left = chunk[0];
+                    let dry_right = chunk[0];
+                    let mut left_signal = dry_left;
+                    let mut right_signal = dry_right;
                     for effect in effects_for_closure.lock().unwrap().iter_mut() {
                         if effect.enabled {
                             let (processed_left, processed_right) = effect.effect.process(left_signal, right_signal);
@@ -71,9 +78,10 @@ fn main() {
                             right_signal = (1.0 - effect.wet) * right_signal + effect.wet * processed_right;
                         }
                     }
-                    let vol = *volume_for_closure.lock().unwrap();
-                    producer.try_push(left_signal * vol).ok(); // left output
-                    producer.try_push(right_signal * vol).ok(); // right output
+                    let out_left = (1.0 - wet) * dry_left + wet * left_signal;
+                    let out_right = (1.0 - wet) * dry_right + wet * right_signal;
+                    producer.try_push(out_left * vol).ok();
+                    producer.try_push(out_right * vol).ok();
                 }
             },
             |err| eprintln!("Input error: {}", err),
@@ -102,5 +110,5 @@ fn main() {
 
     println!("Audio passthrough running");
 
-    ui::run_ui(effects, volume);
+    ui::run_ui(effects, volume, global_wet);
 }

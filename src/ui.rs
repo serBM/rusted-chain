@@ -23,7 +23,7 @@ pub struct AppState {
     pub load_popup_selected: usize,
 }
 
-pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
+pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>, global_wet: Arc<Mutex<f32>>) {
     let mut state = AppState {
         focused_panel: Panel::Left,
         list_state: ratatui::widgets::ListState::default(),
@@ -98,9 +98,9 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
             } else if state.show_popup {
                 &[("↑↓", "navigate"), ("Enter", "confirm"), ("Esc", "cancel")]
             } else if state.focused_panel == Panel::Left {
-                &[("↑↓", "navigate"), ("Enter", "grab/release"), ("Del", "delete"), ("A", "add"), ("S", "save"), ("L", "load"), ("Tab", "switch panel"), ("Q", "quit")]
+                &[("↑↓", "navigate"), ("Enter", "grab/release"), ("Del", "delete"), ("A", "add"), ("S", "save"), ("L", "load"), ("w/W", "global wet"), ("Tab", "switch panel"), ("Q", "quit")]
             } else {
-                &[("↑↓", "navigate"), ("←→", "change value"), ("S", "save"), ("L", "load"), ("Tab", "switch panel"), ("Q", "quit")]
+                &[("↑↓", "navigate"), ("←→", "change value"), ("w/W", "global wet"), ("S", "save"), ("L", "load"), ("Tab", "switch panel"), ("Q", "quit")]
             };
             let keybind_spans: Vec<ratatui::text::Span> = keybind_pairs.iter().flat_map(|(key, desc)| {
                 vec![
@@ -121,8 +121,9 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                 ])
                 .split(vertical[1]);
             let vol = *volume.lock().unwrap();
+            let wet = *global_wet.lock().unwrap();
             frame.render_widget(
-                ratatui::widgets::Paragraph::new(format!("Volume: {:.2}", vol))
+                ratatui::widgets::Paragraph::new(format!("Volume: {:.2}  Global Wet: {:.2}", vol, wet))
                     .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL)),
                 vertical[2],
             );
@@ -290,6 +291,14 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>) {
                     if key.code == crossterm::event::KeyCode::PageDown {
                         let mut vol = volume.lock().unwrap();
                         *vol = (*vol - 0.05).max(0.0);
+                    }
+                    if key.code == crossterm::event::KeyCode::Char('w') && !key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
+                        let mut wet = global_wet.lock().unwrap();
+                        *wet = (*wet - 0.05).max(0.0);
+                    }
+                    if key.code == crossterm::event::KeyCode::Char('W') {
+                        let mut wet = global_wet.lock().unwrap();
+                        *wet = (*wet + 0.05).min(1.0);
                     }
                     if key.code == crossterm::event::KeyCode::Delete && state.focused_panel == Panel::Left {
                         let mut effects_lock = effects.lock().unwrap();

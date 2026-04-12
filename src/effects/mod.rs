@@ -1,7 +1,7 @@
 use crate::preset::PresetEffect;
 
 pub const SAMPLE_RATE: u32 = 48000;
-pub const BUFFER_SIZE: u32 = 256;
+pub const BUFFER_SIZE: u32 = 128;
 pub const AVAILABLE_EFFECTS: &[&str] = &["distortion", "bitcrusher", "delay", "chorus", "compressor", "reverb", "tremolo"];
 
 pub trait Effect {
