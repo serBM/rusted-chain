@@ -2,7 +2,7 @@
   "name": "dylan_electric",
   "slots": [
     {
-      "effect": { "Distortion": { "drive": 2.8, "hard": true } },
+      "effect": { "Gain": { "drive": 2.8, "hard": true } },
       "wet": 0.85,
       "enabled": true
     },

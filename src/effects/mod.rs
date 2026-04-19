@@ -2,7 +2,7 @@ use crate::preset::PresetEffect;
 
 pub const SAMPLE_RATE: u32 = 48000;
 pub const BUFFER_SIZE: u32 = 128;
-pub const AVAILABLE_EFFECTS: &[&str] = &["distortion", "bitcrusher", "delay", "chorus", "compressor", "reverb", "tremolo"];
+pub const AVAILABLE_EFFECTS: &[&str] = &["gain", "bitcrusher", "delay", "chorus", "compressor", "reverb", "tremolo"];
 
 pub trait Effect {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32, f32);
@@ -19,12 +19,12 @@ pub struct EffectSlot {
     pub wet: f32,
 }
 
-pub struct Distortion {
+pub struct Gain {
     pub drive: f32,
     pub hard: bool,
 }
 
-impl Effect for Distortion {
+impl Effect for Gain {
     fn process(&mut self, left_signal: f32, right_signal: f32) -> (f32, f32) {
         if self.hard {
             (
@@ -39,7 +39,7 @@ impl Effect for Distortion {
         }
     }
     fn name(&self) -> &str {
-        "distortion"
+        "gain"
     }
     fn param_names(&self) -> Vec<&str> {
         vec!["drive", "hard"]
@@ -55,7 +55,7 @@ impl Effect for Distortion {
         }
     }
     fn to_preset(&self) -> PresetEffect {
-        PresetEffect::Distortion { drive: self.drive, hard: self.hard }
+        PresetEffect::Gain { drive: self.drive, hard: self.hard }
     }
 }
 

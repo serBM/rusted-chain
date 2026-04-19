@@ -18,7 +18,7 @@ cargo run --release
 
 ## Effects
 
-- Distortion (soft/hard)
+- Gain (soft/hard clipping)
 - Bitcrusher
 - Delay (with ping pong)
 - Chorus

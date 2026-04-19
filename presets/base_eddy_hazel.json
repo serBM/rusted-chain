@@ -3,7 +3,7 @@
   "slots": [
     {
       "effect": {
-        "Distortion": {
+        "Gain": {
           "drive": 3.5,
           "hard": false
         }
@@ -13,7 +13,7 @@
     },
     {
       "effect": {
-        "Distortion": {
+        "Gain": {
           "drive": 1.5,
           "hard": true
         }

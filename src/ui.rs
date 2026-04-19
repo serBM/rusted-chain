@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use crate::effects::{EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo, Effect, AVAILABLE_EFFECTS};
+use crate::effects::{EffectSlot, Gain, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo, Effect, AVAILABLE_EFFECTS};
 use crate::preset::{Preset, effects_to_preset, preset_to_effects};
 
 #[derive(PartialEq)]
@@ -366,7 +366,7 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>, glo
                     }
                     if key.code == crossterm::event::KeyCode::Enter {
                         let new_effect: Box<dyn Effect + Send> = match state.popup_selected {
-                            0 => Box::new(Distortion { drive: 2.0, hard: false }),
+                            0 => Box::new(Gain { drive: 2.0, hard: false }),
                             1 => Box::new(Bitcrusher { bit_depth: 8 }),
                             2 => Box::new(Delay { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 300.0, decay: 0.4, ping_pong: false }),
                             3 => Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0 }),

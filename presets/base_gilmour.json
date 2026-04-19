@@ -2,7 +2,7 @@
   "name": "gilmour",
   "slots": [
     {
-      "effect": { "Distortion": { "drive": 1.4, "hard": false } },
+      "effect": { "Gain": { "drive": 1.4, "hard": false } },
       "wet": 0.5,
       "enabled": true
     },

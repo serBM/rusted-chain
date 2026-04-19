@@ -7,7 +7,7 @@
       "enabled": true
     },
     {
-      "effect": { "Distortion": { "drive": 3.5, "hard": false } },
+      "effect": { "Gain": { "drive": 3.5, "hard": false } },
       "wet": 0.6,
       "enabled": true
     },

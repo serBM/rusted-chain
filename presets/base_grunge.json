@@ -2,12 +2,12 @@
   "name": "grunge",
   "slots": [
     {
-      "effect": { "Distortion": { "drive": 5.0, "hard": false } },
+      "effect": { "Gain": { "drive": 5.0, "hard": false } },
       "wet": 1.0,
       "enabled": true
     },
     {
-      "effect": { "Distortion": { "drive": 1.8, "hard": true } },
+      "effect": { "Gain": { "drive": 1.8, "hard": true } },
       "wet": 0.4,
       "enabled": true
     },

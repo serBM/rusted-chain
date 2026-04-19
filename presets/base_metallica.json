@@ -2,12 +2,12 @@
   "name": "metallica",
   "slots": [
     {
-      "effect": { "Distortion": { "drive": 7.0, "hard": true } },
+      "effect": { "Gain": { "drive": 7.0, "hard": true } },
       "wet": 1.0,
       "enabled": true
     },
     {
-      "effect": { "Distortion": { "drive": 2.0, "hard": false } },
+      "effect": { "Gain": { "drive": 2.0, "hard": false } },
       "wet": 0.3,
       "enabled": true
     },

@@ -2,7 +2,7 @@
   "name": "petrucci",
   "slots": [
     {
-      "effect": { "Distortion": { "drive": 6.0, "hard": false } },
+      "effect": { "Gain": { "drive": 6.0, "hard": false } },
       "wet": 1.0,
       "enabled": true
     },

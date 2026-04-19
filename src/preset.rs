@@ -1,9 +1,9 @@
-use crate::effects::{Effect, EffectSlot, Distortion, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo};
+use crate::effects::{Effect, EffectSlot, Gain, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo};
 use std::path::PathBuf;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum PresetEffect {
-    Distortion { drive: f32, hard: bool },
+    Gain { drive: f32, hard: bool },
     Bitcrusher { bit_depth: u32 },
     Delay { delay_ms: f32, decay: f32, ping_pong: bool },
     Chorus { delay_ms: f32, depth_ms: f32, lfo_frequency: f32 },
@@ -39,7 +39,7 @@ pub fn effects_to_preset(name: String, effects: &Vec<EffectSlot>) -> Preset {
 pub fn preset_to_effects(preset: Preset) -> Vec<EffectSlot> {
     preset.slots.into_iter().map(|slot| {
         let effect: Box<dyn Effect + Send> = match slot.effect {
-            PresetEffect::Distortion { drive, hard } => Box::new(Distortion { drive, hard }),
+            PresetEffect::Gain { drive, hard } => Box::new(Gain { drive, hard }),
             PresetEffect::Bitcrusher { bit_depth } => Box::new(Bitcrusher { bit_depth }),
             PresetEffect::Delay { delay_ms, decay, ping_pong } => Box::new(Delay { delay_ms, decay, ping_pong, past_left_signal: Vec::new(), past_right_signal: Vec::new() }),
             PresetEffect::Chorus { delay_ms, depth_ms, lfo_frequency } => Box::new(Chorus { delay_ms, depth_ms, lfo_frequency, lfo_phase: 0.0, past_left_signal: Vec::new(), past_right_signal: Vec::new() }),
