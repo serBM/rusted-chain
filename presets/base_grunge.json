@@ -2,13 +2,23 @@
   "name": "grunge",
   "slots": [
     {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 120.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
       "effect": { "Gain": { "drive": 5.0, "hard": false } },
       "wet": 1.0,
       "enabled": true
     },
     {
-      "effect": { "Gain": { "drive": 1.8, "hard": true } },
+      "effect": { "Gain": { "drive": 1.8, "hard": false } },
       "wet": 0.4,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 500.0, "q": 1.0, "gain_db": -4.0 } },
+      "wet": 1.0,
       "enabled": true
     },
     {

@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use crate::effects::{EffectSlot, Gain, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo, Effect, AVAILABLE_EFFECTS};
+use crate::effects::{AVAILABLE_EFFECTS, Bitcrusher, Chorus, Compressor, Delay, Effect, EffectSlot, Filter, FilterType, Gain, Reverb, Tremolo};
 use crate::preset::{Preset, effects_to_preset, preset_to_effects};
 
 #[derive(PartialEq)]
@@ -372,7 +372,8 @@ pub fn run_ui(effects: Arc<Mutex<Vec<EffectSlot>>>, volume: Arc<Mutex<f32>>, glo
                             3 => Box::new(Chorus { past_left_signal: Vec::new(), past_right_signal: Vec::new(), delay_ms: 30.0, depth_ms: 2.0, lfo_frequency: 1.0, lfo_phase: 0.0 }),
                             4 => Box::new(Compressor { threshold: 0.7, ratio: 4.0, attack_ms: 10.0, release_ms: 200.0, current_gain: 1.0 }),
                             5 => Box::new(Reverb::new(1.0, 0.5)),
-                            _ => Box::new(Tremolo {depth: 0.4, lfo_frequency: 1.0, lfo_phase: 1.0}),
+                            6 => Box::new(Tremolo {depth: 0.4, lfo_frequency: 1.0, lfo_phase: 1.0}),
+                            _ => Box::new(Filter {filter_type: FilterType::Peak, frequency: 1000.0, q: 1.0, gain_db: 0.0, x1_left: 0.0, x1_right: 0.0, x2_left: 0.0, x2_right: 0.0, y1_left: 0.0, y1_right: 0.0, y2_left: 0.0, y2_right: 0.0}),
                         };
                         effects.lock().unwrap().push(EffectSlot { effect: new_effect, enabled: true, wet: 1.0 });
                         state.show_popup = false;

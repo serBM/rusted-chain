@@ -2,17 +2,52 @@
   "name": "metallica",
   "slots": [
     {
-      "effect": { "Gain": { "drive": 7.0, "hard": true } },
+      "effect": { "Compressor": { "threshold": 0.6, "ratio": 4.0, "attack_ms": 10.0, "release_ms": 100.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 100.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 7.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 130.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 5.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 150.0, "q": 0.7, "gain_db": 0.0 } },
       "wet": 1.0,
       "enabled": true
     },
     {
       "effect": { "Gain": { "drive": 2.0, "hard": false } },
-      "wet": 0.3,
+      "wet": 1.0,
       "enabled": true
     },
     {
-      "effect": { "Compressor": { "threshold": 0.4, "ratio": 8.0, "attack_ms": 3.0, "release_ms": 80.0 } },
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 80.0, "q": 0.7, "gain_db": 3.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 750.0, "q": 1.2, "gain_db": -10.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 5000.0, "q": 0.8, "gain_db": 4.0 } },
       "wet": 1.0,
       "enabled": true
     },

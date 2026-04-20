@@ -2,6 +2,16 @@
   "name": "neil_young",
   "slots": [
     {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 80.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 1.5, "hard": false } },
+      "wet": 0.7,
+      "enabled": true
+    },
+    {
       "effect": { "Compressor": { "threshold": 0.8, "ratio": 2.0, "attack_ms": 40.0, "release_ms": 400.0 } },
       "wet": 0.7,
       "enabled": true

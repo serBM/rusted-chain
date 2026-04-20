@@ -1,4 +1,4 @@
-use crate::effects::{Effect, EffectSlot, Gain, Bitcrusher, Delay, Chorus, Compressor, Reverb, Tremolo};
+use crate::effects::{Bitcrusher, Chorus, Compressor, Delay, Effect, EffectSlot, FilterType, Gain, Reverb, Tremolo, Filter};
 use std::path::PathBuf;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -10,6 +10,7 @@ pub enum PresetEffect {
     Compressor { threshold: f32, ratio: f32, attack_ms: f32, release_ms: f32 },
     Reverb { room_size: f32, decay: f32 },
     Tremolo { depth: f32, lfo_frequency: f32},
+    Filter { filter_type: FilterType, frequency: f32, q: f32, gain_db: f32},
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -46,6 +47,7 @@ pub fn preset_to_effects(preset: Preset) -> Vec<EffectSlot> {
             PresetEffect::Compressor { threshold, ratio, attack_ms, release_ms } => Box::new(Compressor { threshold, ratio, attack_ms, release_ms, current_gain: 1.0 }),
             PresetEffect::Reverb { room_size, decay } => Box::new(Reverb::new(room_size, decay)),
             PresetEffect::Tremolo { depth, lfo_frequency} => Box::new(Tremolo { depth, lfo_frequency, lfo_phase: 0.0 }),
+            PresetEffect::Filter { filter_type, frequency, q, gain_db} => Box::new(Filter { filter_type, frequency, q, gain_db, x1_left: 0.0, x1_right: 0.0, x2_left: 0.0, x2_right: 0.0, y1_left: 0.0, y1_right: 0.0, y2_left: 0.0, y2_right: 0.0 }),
         };
         EffectSlot { effect, wet: slot.wet, enabled: slot.enabled }
     }).collect()

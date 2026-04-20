@@ -2,6 +2,11 @@
   "name": "soad_bass",
   "slots": [
     {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 50.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
       "effect": { "Compressor": { "threshold": 0.25, "ratio": 10.0, "attack_ms": 3.0, "release_ms": 60.0 } },
       "wet": 1.0,
       "enabled": true

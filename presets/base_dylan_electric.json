@@ -2,8 +2,18 @@
   "name": "dylan_electric",
   "slots": [
     {
-      "effect": { "Gain": { "drive": 2.8, "hard": true } },
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 100.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 2.8, "hard": false } },
       "wet": 0.85,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 3000.0, "q": 0.8, "gain_db": 3.0 } },
+      "wet": 1.0,
       "enabled": true
     },
     {

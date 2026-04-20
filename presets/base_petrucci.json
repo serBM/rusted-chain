@@ -2,12 +2,47 @@
   "name": "petrucci",
   "slots": [
     {
-      "effect": { "Gain": { "drive": 6.0, "hard": false } },
+      "effect": { "Compressor": { "threshold": 0.5, "ratio": 4.0, "attack_ms": 8.0, "release_ms": 100.0 } },
       "wet": 1.0,
       "enabled": true
     },
     {
-      "effect": { "Compressor": { "threshold": 0.35, "ratio": 6.0, "attack_ms": 5.0, "release_ms": 100.0 } },
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 100.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 2.5, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 120.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 5.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 140.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Gain": { "drive": 8.0, "hard": false } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 200.0, "q": 0.8, "gain_db": -3.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 5000.0, "q": 0.8, "gain_db": 5.0 } },
       "wet": 1.0,
       "enabled": true
     },

@@ -2,8 +2,18 @@
   "name": "gilmour",
   "slots": [
     {
+      "effect": { "Filter": { "filter_type": "HighPass", "frequency": 80.0, "q": 0.7, "gain_db": 0.0 } },
+      "wet": 1.0,
+      "enabled": true
+    },
+    {
       "effect": { "Gain": { "drive": 1.4, "hard": false } },
       "wet": 0.5,
+      "enabled": true
+    },
+    {
+      "effect": { "Filter": { "filter_type": "Peak", "frequency": 4000.0, "q": 0.8, "gain_db": 4.0 } },
+      "wet": 1.0,
       "enabled": true
     },
     {
